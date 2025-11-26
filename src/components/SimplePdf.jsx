@@ -1,42 +1,43 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import jsPDF from "jspdf";
 
-/*
-  SimplePdfGenerator:
-  - uses /templates/image1.png as page background
-  - form with one field: collegeName
-  - generates and downloads single-page PDF
-*/
+import MBAForm from "../forms/MBAForm";
+import EngineeringForm from "../forms/EngineeringForm";
+import CommonFields from "../fields/CommonFields";
 
 export default function SimplePdfGenerator({ pageSets }) {
+  const [domain, setDomain] = useState("mba");
+  const pages = pageSets[domain] || [];
+
   const [collegeName, setCollegeName] = useState("");
   const [logo, setLogo] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  const [domain, setDomain] = useState("mba");
-  const pages = pageSets[domain];
 
+  // MBA Fields
   const [tableFields, setTableFields] = useState({
     studentCount_1_1: "",
     trainingHrs_1_1: "",
-    cost_1_1: "",
-
     studentCount_1_2: "",
     trainingHrs_1_2: "",
-    // cost_1_2: "",
+    cost_1: "",
 
     studentCount_2_1: "",
     trainingHrs_2_1: "",
-    cost_2_1: "",
+    cost_2: "",
+  });
+
+  // Engineering Fields
+  const [engFields, setEngFields] = useState({
+    cse_students: "",
+    cse_hours: "",
+    cse_cost: "",
   });
 
   const loadImage = (src) =>
     new Promise((resolve, reject) => {
       const img = new Image();
-      img.crossOrigin = "anonymous";
       img.onload = () => resolve(img);
-      img.onerror = (err) => reject(err);
+      img.onerror = reject;
       img.src = src;
     });
 
@@ -44,9 +45,20 @@ export default function SimplePdfGenerator({ pageSets }) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => setLogo(ev.target.result); // dataURL
+    reader.onload = (ev) => setLogo(ev.target.result);
     reader.readAsDataURL(file);
   };
+
+  // domain-specific coordinates (px)
+  // Tweak these numbers after testing with your actual background images.
+  // Format:
+  // coords[domain] = {
+  //   college: { x, y, fontSize },
+  //   logo: { x, y, width, height },
+  //   table: { // for "table" page: rows = array of y positions, columns = x positions
+  //     cols: { studentX, costX, hoursX }, rows: [y1, y2, y3, y4]
+  //   }
+  // }
 
   const generate = async () => {
     try {
@@ -54,6 +66,61 @@ export default function SimplePdfGenerator({ pageSets }) {
 
       const PAGE_WIDTH = 595;
       const PAGE_HEIGHT = 842;
+      // DOMAIN-SPECIFIC COORDS + FONTS
+      const coords = {
+        mba: {
+          college: {
+            x: 56,
+            y: 320,
+            fontSize: 20,
+            fontName: "times",
+            fontStyle: "bold",
+          },
+
+          logo: {
+            x: 595 - 220 - 40, // PAGE_WIDTH - logoWidth - margin
+            y: 842 - 130 - 40, // PAGE_HEIGHT - logoHeight - margin
+            width: 220,
+            height: 130,
+          },
+
+          table: {
+            fontName: "times",
+            fontStyle: "normal",
+            fontSize: 15,
+
+            cols: { studentX: 280, hrsX: 380, costX: 490 },
+            rows: [540, 565, 592],
+            cost1Y: 550, // cost lies between row 1 & 2
+          },
+        },
+
+        engineering: {
+          college: {
+            x: 13,
+            y: 380,
+            fontSize: 18,
+            fontName: "helvetica",
+            fontStyle: "bold",
+          },
+
+          logo: {
+            x: 13, // adjust after checking image
+            y: 590,
+            width: 150,
+            height: 150,
+          },
+
+          table: {
+            fontName: "helvetica",
+            fontStyle: "normal",
+            fontSize: 15,
+
+            cols: { studentX: 170, costX: 300, hoursX: 515 },
+            rows: [203, 218, 233, 250], // 1st, 2nd, 3rd, 4th year
+          },
+        },
+      };
 
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -61,64 +128,134 @@ export default function SimplePdfGenerator({ pageSets }) {
         format: [PAGE_WIDTH, PAGE_HEIGHT],
       });
 
+      // ensure pages exist
+      if (!pages || pages.length === 0) {
+        alert("No pages available for selected domain.");
+        setLoading(false);
+        return;
+      }
+
       for (let i = 0; i < pages.length; i++) {
         const { bg, editable } = pages[i];
-
         const bgImg = await loadImage(bg);
 
         if (i > 0) pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-
         pdf.addImage(bgImg, "PNG", 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
 
-        // Only first page is editable
-        if (editable === true) {
-          const x = 56;
-          const y = 320;
-          const fontSize = 20;
+        const c = coords[domain] || coords.mba; // fallback to mba if domain missing
 
+        // PAGE with college name + logo
+        if (editable === true) {
+          // college
+          const cx = c.college.x;
+          const cy = c.college.y;
+          const cFont = c.college.fontSize || 18;
+
+          if (domain === "engineering") {
+            pdf.setTextColor("#fff"); // deep blue (looks premium)
+          } else {
+            pdf.setTextColor(0, 0, 0); // MBA stays BLACK
+          }
           try {
             pdf.setFont("Times", "bold");
-          } catch (e) {
+          } catch {
             if (pdf.setFontType) pdf.setFontType("bold");
-            console.log("Font setting error:", e);
           }
-
-          pdf.setFontSize(fontSize);
-
+          pdf.setFontSize(cFont);
           const splitText = pdf.splitTextToSize(
             collegeName || " ",
-            PAGE_WIDTH - x - 200
+            PAGE_WIDTH - cx - 300
           );
-          pdf.text(splitText, x, y);
+          pdf.text(splitText, cx, cy);
 
+          // logo (if uploaded)
           if (logo) {
             const logoImg = await loadImage(logo);
-
-            const logoWidth = 220;
-            const logoHeight = 130;
-
-            const lx = PAGE_WIDTH - logoWidth - 40;
-            const ly = PAGE_HEIGHT - logoHeight - 40;
-
-            pdf.addImage(logoImg, "PNG", lx, ly, logoWidth, logoHeight);
+            const lx = c.logo.x;
+            const ly = c.logo.y;
+            const lw = c.logo.width;
+            const lh = c.logo.height;
+            pdf.addImage(logoImg, "PNG", lx, ly, lw, lh);
           }
         }
+
+        // TABLE page (domain-aware)
         if (editable === "table") {
           pdf.setFontSize(15);
+          pdf.setTextColor(0, 0, 0);
 
-          // Coordinates must match your template precisely:
-          pdf.text(tableFields.studentCount_1_1 || "", 280, 540);
-          pdf.text(tableFields.trainingHrs_1_1 || "", 380, 540);
-          pdf.text(tableFields.cost_1_1 || "", 490, 550);
+          if (domain === "mba") {
+            const t = c.table;
+            // row 1 (1st year 1st sem)
+            pdf.text(
+              tableFields.studentCount_1_1 || "",
+              t.cols.studentX,
+              t.rows[0]
+            );
+            pdf.text(tableFields.trainingHrs_1_1 || "", t.cols.hrsX, t.rows[0]);
 
-          pdf.text(tableFields.studentCount_1_2 || "", 280, 565); //these fiekds are correct
-          pdf.text(tableFields.trainingHrs_1_2 || "", 380, 565); //dc
-          //pdf.text(tableFields.cost_1_2 || "", 490, 565); //dc
+            // row 2 (1st year 2nd sem)
+            pdf.text(
+              tableFields.studentCount_1_2 || "",
+              t.cols.studentX,
+              t.rows[1]
+            );
+            pdf.text(tableFields.trainingHrs_1_2 || "", t.cols.hrsX, t.rows[1]);
 
-          pdf.text(tableFields.studentCount_2_1 || "", 280, 592);
-          pdf.text(tableFields.trainingHrs_2_1 || "", 380, 592);
-          pdf.text(tableFields.cost_2_1 || "", 490, 592);
-          // Adjust X and Y based on your table layout
+            // cost for 1st year (rowspan)
+            pdf.text(
+              tableFields.cost_1 || tableFields.cost_1_1 || "",
+              t.cols.costX,
+              t.cost1Y || t.rows[0] + 10
+            );
+
+            // row 3 (2nd year 2nd sem)
+            pdf.text(
+              tableFields.studentCount_2_1 || "",
+              t.cols.studentX,
+              t.rows[2]
+            );
+            pdf.text(tableFields.trainingHrs_2_1 || "", t.cols.hrsX, t.rows[2]);
+            pdf.text(
+              tableFields.cost_2 || tableFields.cost_2_1 || "",
+              t.cols.costX,
+              t.rows[2]
+            );
+          }
+
+          if (domain === "engineering") {
+            const t = c.table;
+            // iterate rows (4 years)
+            const rows = t.rows;
+            for (let r = 0; r < rows.length; r++) {
+              const y = rows[r];
+              // keys in engFields should follow: studentCount_y1, cost_y1, hours_y1 etc.
+              const suffix = `y${r + 1}`;
+              const studentVal =
+                (engFields &&
+                  (engFields[`studentCount_${suffix}`] ??
+                    engFields[`studentCount_${r + 1}`] ??
+                    engFields[`studentCount_y${r + 1}`] ??
+                    "")) ||
+                "";
+              const costVal =
+                (engFields &&
+                  (engFields[`cost_${suffix}`] ??
+                    engFields[`cost_${r + 1}`] ??
+                    "")) ||
+                "";
+              const hoursVal =
+                (engFields &&
+                  (engFields[`hours_${suffix}`] ??
+                    engFields[`hours_${r + 1}`] ??
+                    "")) ||
+                "";
+
+              pdf.text(String(studentVal), t.cols.studentX, y);
+              pdf.text(String(costVal), t.cols.costX, y);
+              pdf.text(String(hoursVal), t.cols.hoursX, y);
+            }
+          }
         }
       }
 
@@ -132,218 +269,43 @@ export default function SimplePdfGenerator({ pageSets }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto my-8 p-8 bg-white rounded-xl shadow">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        Proposal PDF Generator
-      </h2>
-<div className="mb-6">
-          <label className="block font-semibold mb-2">Select Domain</label>
-          <select
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-            className="w-full p-3 border rounded-lg"
-          >
-            <option value="mba">MBA</option>
-            <option value="engineering">Engineering</option>
-          </select>
-        </div>
+    <div className="max-w-4xl mx-auto p-8 bg-white rounded-xl shadow">
+      <h2 className="text-2xl font-bold mb-6">Proposal PDF Generator</h2>
 
-      {/* College Name */}
+      {/* Domain (MBA / Engineering) */}
       <div className="mb-6">
-        <label className="block font-semibold mb-2 text-gray-700">
-          College Name
-        </label>
-        <input
-          value={collegeName}
-          onChange={(e) => setCollegeName(e.target.value)}
-          placeholder="Enter college name"
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+        <label className="block font-semibold mb-2">Select Domain</label>
+        <select
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          className="w-full p-3 border rounded-lg"
+        >
+          <option value="mba">MBA</option>
+          <option value="engineering">Engineering</option>
+        </select>
       </div>
 
-      {/* Logo Upload */}
-      <div className="mb-8">
-        <label className="block font-semibold mb-2 text-gray-700">
-          Upload College Logo
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleLogoUpload}
-          className="block w-full text-sm border p-2 rounded-lg cursor-pointer bg-gray-50"
-        />
+      {/* Common Fields */}
+      <CommonFields
+        collegeName={collegeName}
+        setCollegeName={setCollegeName}
+        logo={logo}
+        handleLogoUpload={handleLogoUpload}
+      />
 
-        {logo && (
-          <img
-            src={logo}
-            alt="Logo preview"
-            className="w-32 mt-4 rounded border shadow-sm"
-          />
-        )}
-      </div>
+      {/* Domain Specific Forms */}
+      {domain === "mba" && (
+        <MBAForm tableFields={tableFields} setTableFields={setTableFields} />
+      )}
 
-      {/* TABLE SECTION */}
-      <h3 className="text-xl font-semibold mt-10 mb-4 text-gray-800">
-        Training & Placement Table (Page 6)
-      </h3>
+      {domain === "engineering" && (
+        <EngineeringForm engFields={engFields} setEngFields={setEngFields} />
+      )}
 
-      <div className="overflow-x-auto mb-3">
-        <table className="min-w-full border border-gray-300">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border p-3 text-left">Year</th>
-              <th className="border p-3 text-left">Sem</th>
-              <th className="border p-3 text-left">Student Count</th>
-              <th className="border p-3 text-left">Training Hrs</th>
-              <th className="border p-3 text-left">Cost per Student</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {/* 1st Year MBA - 1st Sem */}
-            <tr>
-              <td rowSpan="2" className="border p-3 font-medium">
-                1st Year - MBA
-              </td>
-              <td className="border p-3">1st Sem</td>
-
-              <td className="border p-3">
-                <input
-                  className="w-full border p-2 rounded"
-                  placeholder="Count"
-                  value={tableFields.studentCount_1_1}
-                  onChange={(e) =>
-                    setTableFields({
-                      ...tableFields,
-                      studentCount_1_1: e.target.value,
-                    })
-                  }
-                />
-              </td>
-
-              <td className="border p-3">
-                <input
-                  className="w-full border p-2 rounded"
-                  placeholder="Hrs"
-                  value={tableFields.trainingHrs_1_1}
-                  onChange={(e) =>
-                    setTableFields({
-                      ...tableFields,
-                      trainingHrs_1_1: e.target.value,
-                    })
-                  }
-                />
-              </td>
-
-              <td rowSpan="2" className="border p-3">
-                <input
-                  className="w-full border p-2 rounded"
-                  placeholder="Cost"
-                  value={tableFields.cost_1_1}
-                  onChange={(e) =>
-                    setTableFields({ ...tableFields, cost_1_1: e.target.value })
-                  }
-                />
-              </td>
-            </tr>
-
-            {/* 1st Year MBA - 2nd Sem */}
-            <tr>
-              <td className="border p-3">2nd Sem</td>
-
-              <td className="border p-3">
-                <input
-                  className="w-full border p-2 rounded"
-                  value={tableFields.studentCount_1_2}
-                  placeholder="Count"
-                  onChange={(e) =>
-                    setTableFields({
-                      ...tableFields,
-                      studentCount_1_2: e.target.value,
-                    })
-                  }
-                />
-              </td>
-
-              <td className="border p-3">
-                <input
-                  className="w-full border p-2 rounded"
-                  value={tableFields.trainingHrs_1_2}
-                  placeholder="Hrs"
-                  onChange={(e) =>
-                    setTableFields({
-                      ...tableFields,
-                      trainingHrs_1_2: e.target.value,
-                    })
-                  }
-                />
-              </td>
-
-              {/* <td className="border p-3">
-          <input
-            className="w-full border p-2 rounded"
-            value={tableFields.cost_1_2}
-            placeholder="Cost"
-            onChange={(e) =>
-              setTableFields({ ...tableFields, cost_1_2: e.target.value })
-            }
-          />
-        </td> */}
-            </tr>
-
-            {/* 2nd Year MBA - 2nd Sem */}
-            <tr>
-              <td className="border p-3 font-medium">2nd Year - MBA</td>
-              <td className="border p-3">2nd Sem</td>
-
-              <td className="border p-3">
-                <input
-                  className="w-full border p-2 rounded"
-                  placeholder="Count"
-                  value={tableFields.studentCount_2_1}
-                  onChange={(e) =>
-                    setTableFields({
-                      ...tableFields,
-                      studentCount_2_1: e.target.value,
-                    })
-                  }
-                />
-              </td>
-
-              <td className="border p-3">
-                <input
-                  className="w-full border p-2 rounded"
-                  placeholder="Hrs"
-                  value={tableFields.trainingHrs_2_1}
-                  onChange={(e) =>
-                    setTableFields({
-                      ...tableFields,
-                      trainingHrs_2_1: e.target.value,
-                    })
-                  }
-                />
-              </td>
-
-              <td className="border p-3">
-                <input
-                  className="w-full border p-2 rounded"
-                  placeholder="Cost"
-                  value={tableFields.cost_2_1}
-                  onChange={(e) =>
-                    setTableFields({ ...tableFields, cost_2_1: e.target.value })
-                  }
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* BUTTON */}
       <button
         onClick={generate}
         disabled={loading}
-        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow transition disabled:bg-gray-400"
+        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow"
       >
         {loading ? "Generating..." : "Generate PDF"}
       </button>
