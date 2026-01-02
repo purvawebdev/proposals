@@ -46,7 +46,7 @@ export default function MbaMcaForm({ mbaMcaFields, setMbaMcaFields }) {
               
               {/* MERGED COST CELL (Rowspan 2) */}
               <td className="px-4 py-3 border border-gray-300 bg-white align-middle relative" rowSpan={2}>
-                <div className="absolute top-2 left-2 text-[10px] text-gray-400 font-semibold uppercase tracking-wider pointer-events-none">Year 1 Total</div>
+                
                 <div className="flex items-center justify-center h-full pt-4">
                     <TableInput type="text" placeholder="₹ Total Cost" value={mbaMcaFields.mba_year1_cost} onChange={(e) => handleChange("mba_year1_cost", e.target.value)} />
                 </div>
@@ -85,7 +85,7 @@ export default function MbaMcaForm({ mbaMcaFields, setMbaMcaFields }) {
               
               {/* MERGED COST CELL (Rowspan 2) */}
               <td className="px-4 py-3 border border-gray-300 bg-white align-middle relative" rowSpan={2}>
-                <div className="absolute top-2 left-2 text-[10px] text-gray-400 font-semibold uppercase tracking-wider pointer-events-none">Year 1 Total</div>
+              
                 <div className="flex items-center justify-center h-full pt-4">
                     <TableInput type="text" placeholder="₹ Total Cost" value={mbaMcaFields.mca_year1_cost} onChange={(e) => handleChange("mca_year1_cost", e.target.value)} />
                 </div>
@@ -114,4 +114,3 @@ export default function MbaMcaForm({ mbaMcaFields, setMbaMcaFields }) {
     </div>
   );
 }
-//gotta change the coords of mca pages in simpleform will do that later
