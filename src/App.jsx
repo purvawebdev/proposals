@@ -28,8 +28,7 @@ function App() {
       { bg: "/eng/1.jpg", editable: true },
       { bg: "/eng/2.jpg", editable: false },
       { bg: "/eng/3.jpg", editable: false },
-      { bg: "/eng/4.jpg", editable: false },
-      { bg: "/eng/5.jpg", editable: false },
+   
       { bg: "/eng/6.jpg", editable: "table" },
     ],
 

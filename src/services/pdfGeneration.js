@@ -1,10 +1,12 @@
 // services/pdfGenerationService.js
 import { DOMAINS, COORDINATES, PAGE_DIMENSIONS } from '../constants/pdfConstants';
+import { ENGINEERING_BRANCHES } from '../constants/engineeringData';
 
 export class PdfGenerationService {
   static loadImage = (src) =>
     new Promise((resolve, reject) => {
       const img = new Image();
+      img.crossOrigin = "Anonymous"; // Important for some environments
       img.onload = () => resolve(img);
       img.onerror = reject;
       img.src = src;
@@ -68,6 +70,112 @@ export class PdfGenerationService {
         scaled.width,
         scaled.height
       );
+    }
+  }
+
+  static async renderBranchInfo(pdf, branchId, startY) {
+    // 1. Get Data
+    const branchInfo = ENGINEERING_BRANCHES.find(b => b.id === branchId);
+    if (!branchInfo) return;
+
+    // 2. Set Start Position
+    // If it's the Aptitude page (first branch), start lower (500).
+    // If it's a Generic page (extra branches), start at the top (100).
+   
+
+    // --- CONFIGURATION ---
+    const logoSize = 60;
+    const boxHeight = 40;
+    const fontSize = 22;
+    
+    // 1. Vertical Alignment Math
+    // We want the box to be vertically centered relative to the logo.
+    // Offset = (Difference in height) / 2  -> (60 - 40) / 2 = 10px down.
+    const centerOffset = (logoSize - boxHeight) / 2; 
+
+    const logoY = startY;                // Logo starts at the anchor point
+    const boxY = startY + centerOffset;  // Box is pushed down to center it
+    // Text Y is approx: BoxY + HalfBox + HalfFontCapHeight. 28 is a safe "visual center" for size 22 font.
+    const textY = boxY + 28;             
+
+    // 2. Horizontal Alignment (Left to Right)
+    const logoX = 50;
+    const titleX = 110; // Text starts just after where the logo ends (50 + 60 = 110)
+    const boxPadding = 10;
+
+
+    // --- DRAWING ---
+
+    // 3. Draw Title (Branch Name)
+    pdf.setFontSize(fontSize);
+    pdf.setFont("helvetica", "bold");
+    
+    const titleText = branchInfo.label.toUpperCase();
+    const textWidth = pdf.getTextWidth(titleText);
+    
+    // Draw Blue Rounded Box 
+    // The box X starts at (titleX - padding), creating that nice overlap with the logo
+    pdf.setFillColor(0, 31, 95); 
+    pdf.roundedRect(titleX - boxPadding, boxY, textWidth + (boxPadding * 2), boxHeight, 5, 5, "F");
+
+    // Draw Text
+    pdf.setTextColor(255, 255, 255); 
+    pdf.text(titleText, titleX, textY);
+
+    // 4. Draw Logo (Last, so it sits ON TOP of the blue box edge)
+    try {
+      const logoPath = `/logos/${branchId}.png`; 
+      const bLogo = await PdfGenerationService.loadImage(logoPath);
+      
+      // Use the variables we defined
+      pdf.addImage(bLogo, "PNG", logoX, logoY, logoSize, logoSize); 
+    } catch (e) {
+      // console.warn(`Logo not found for ${branchId}`);
+    }
+
+    // 5. Draw Syllabus Table (The 3x3 Grid) - Black Text, Black Borders
+    if (branchInfo.syllabusTable) {
+      const tableStartY = startY + 80; // Start 80px below the header
+      
+      // Table Formatting
+      const colWidth = 150; 
+      const rowHeight = 45; 
+      // Removed 'gap' to make it a proper connected table
+      
+      // Center the table
+      const totalTableWidth = (colWidth * 3);
+      const startX = (PAGE_DIMENSIONS.WIDTH - totalTableWidth) / 2; 
+
+      pdf.setFontSize(15);
+      pdf.setLineWidth(1.0); // Standard border
+      pdf.setDrawColor(0, 0, 0); // Black Border
+
+      // Loop Rows
+      branchInfo.syllabusTable.forEach((row, rowIndex) => {
+        const y = tableStartY + (rowIndex * rowHeight);
+        
+        // Loop Columns
+        row.forEach((cellText, colIndex) => {
+          const x = startX + (colIndex * colWidth);
+          
+          // A. Draw Cell Box (White Fill, Black Border)
+          pdf.setFillColor(255, 255, 255); 
+          pdf.rect(x, y, colWidth, rowHeight, "FD"); 
+          
+          // B. Draw Text (Centered, Black, Bold)
+          pdf.setTextColor(0, 0, 0); // Black Text
+          pdf.setFont("helvetica", "bold");
+          
+          // Handle text wrapping
+          const splitText = pdf.splitTextToSize(cellText, colWidth - 20);
+          
+          // Calculate vertical center
+          const textY = y + (rowHeight / 2) + 4; 
+          const yOffset = (splitText.length - 1) * 5; 
+
+          pdf.text(splitText, x + (colWidth / 2), textY - yOffset, { align: "center" });
+        });
+      });
     }
   }
 
