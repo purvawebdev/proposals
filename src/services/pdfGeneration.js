@@ -130,7 +130,7 @@ export class PdfGenerationService {
       // Use the variables we defined
       pdf.addImage(bLogo, "PNG", logoX, logoY, logoSize, logoSize); 
     } catch (e) {
-      // console.warn(`Logo not found for ${branchId}`);
+      e;// console.warn(`Logo not found for ${branchId}`);
     }
 
     // 5. Draw Syllabus Table (The 3x3 Grid) - Black Text, Black Borders
@@ -251,16 +251,37 @@ export class PdfGenerationService {
     pdf.text(tableFields.cost_2 || "", table.cols.costX, table.rows[2]);
   }
 
-  static renderEngineeringTable(pdf, table, engFields) {
+static renderEngineeringTable(pdf, table, engFields) {
     table.rows.forEach((y, r) => {
       const suffix = `y${r + 1}`;
       const studentVal = engFields[`studentCount_${suffix}`] ?? engFields[`studentCount_${r + 1}`] ?? "";
-      const costVal = engFields[`cost_${suffix}`] ?? engFields[`cost_${r + 1}`] ?? "";
+      
+      // 1. Change const to let so we can modify it
+      let costVal = engFields[`cost_${suffix}`] ?? engFields[`cost_${r + 1}`] ?? "";
+      
       const hoursVal = engFields[`hours_${suffix}`] ?? engFields[`hours_${r + 1}`] ?? "";
+
+      // 2. Add GST Logic
+      if (engFields.isGstEnabled && costVal) {
+        costVal = `${costVal} + 18% GST`;
+      }
 
       pdf.text(String(studentVal), table.cols.studentX, y);
       pdf.text(String(costVal), table.cols.costX, y);
       pdf.text(String(hoursVal), table.cols.hoursX, y);
+
+      // --- NEW: Print 4th Year Label if exists ---
+      if (r === 3 && engFields[`customLabel_4`]) {
+         const label = `(${engFields[`customLabel_4`]})`;
+         
+         // Temporarily reduce font size for the label
+         pdf.setFontSize(12); 
+         
+         // '85' is the X position. Adjust this if it overlaps with "4th Year" text
+         pdf.text(label, 65, y); 
+         
+         pdf.setFontSize(15); // Reset font size for next loop
+      }
     });
   }
 

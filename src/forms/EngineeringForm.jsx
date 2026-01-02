@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { Check } from "lucide-react";
 import { ENGINEERING_BRANCHES } from "../constants/engineeringData";
 
@@ -17,7 +17,7 @@ export default function EngineeringForm({ engFields, setEngFields }) {
   // 1. Branch Selection Logic
   const selectedBranches = engFields.selectedBranches || [];
 
-  const allBranchIds = ENGINEERING_BRANCHES.map(b => b.id);
+  const allBranchIds = ENGINEERING_BRANCHES.map((b) => b.id);
   const isAllSelected = selectedBranches.length === allBranchIds.length;
 
   const toggleSelectAll = () => {
@@ -30,9 +30,15 @@ export default function EngineeringForm({ engFields, setEngFields }) {
 
   const toggleBranch = (id) => {
     if (selectedBranches.includes(id)) {
-      setEngFields({ ...engFields, selectedBranches: selectedBranches.filter(b => b !== id) });
+      setEngFields({
+        ...engFields,
+        selectedBranches: selectedBranches.filter((b) => b !== id),
+      });
     } else {
-      setEngFields({ ...engFields, selectedBranches: [...selectedBranches, id] });
+      setEngFields({
+        ...engFields,
+        selectedBranches: [...selectedBranches, id],
+      });
     }
   };
 
@@ -48,9 +54,15 @@ export default function EngineeringForm({ engFields, setEngFields }) {
     setEngFields({ ...engFields, [`${field}_${rowKey}`]: val });
   };
 
+  // GST Logic
+  const isGstEnabled = engFields.isGstEnabled || false;
+
+  const toggleGst = () => {
+    setEngFields({ ...engFields, isGstEnabled: !isGstEnabled });
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
       {/* SECTION A: BRANCH SELECTION */}
       <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
         {/* Header with Select All Button */}
@@ -58,22 +70,26 @@ export default function EngineeringForm({ engFields, setEngFields }) {
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
             Select Branches (For Syllabus Pages)
           </h3>
-          
-          <button 
+
+          <button
             onClick={toggleSelectAll}
             className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-indigo-600 transition-colors"
           >
             {/* Custom Checkbox UI */}
-            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
-              isAllSelected ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-300"
-            }`}>
+            <div
+              className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                isAllSelected
+                  ? "bg-indigo-600 border-indigo-600"
+                  : "bg-white border-slate-300"
+              }`}
+            >
               {isAllSelected && <Check size={12} className="text-white" />}
             </div>
             Select All
           </button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {ENGINEERING_BRANCHES.map(b => {
+          {ENGINEERING_BRANCHES.map((b) => {
             const isSelected = selectedBranches.includes(b.id);
             return (
               <button
@@ -101,7 +117,20 @@ export default function EngineeringForm({ engFields, setEngFields }) {
               <th className="px-6 py-4 w-32">Year</th>
               <th className="px-4 py-4">Student Count</th>
               <th className="px-4 py-4">Training Hrs</th>
-              <th className="px-4 py-4">Cost / Student</th>
+              <th className="px-4 py-4 flex items-center gap-2">
+                Cost / Student
+                <label className="flex items-center gap-1.5 cursor-pointer bg-white px-2 py-1 rounded border border-gray-300 shadow-sm hover:border-indigo-300 select-none">
+                  <input
+                    type="checkbox"
+                    checked={isGstEnabled}
+                    onChange={toggleGst}
+                    className="w-3.5 h-3.5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-[10px] font-bold text-indigo-600 whitespace-nowrap">
+                    Add " + 18% GST" Text
+                  </span>
+                </label>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -109,26 +138,51 @@ export default function EngineeringForm({ engFields, setEngFields }) {
               <tr key={row.key} className="hover:bg-slate-50">
                 <td className="px-6 py-3 font-bold text-slate-700 bg-slate-50/50 border-r border-slate-100">
                   {row.label}
+                  {/* --- NEW: Input for 4th Year --- */}
+                  {row.key === "4" && (
+                    <div className="mt-1">
+                      <input
+                        placeholder="(PY 27)"
+                        className="w-24 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none font-normal text-gray-500"
+                        value={engFields[`customLabel_4`] || ""}
+                        onChange={(e) =>
+                          updateData(row.key, "customLabel", e.target.value)
+                        }
+                      />
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <TableInput
-                    value={engFields[`studentCount_${row.key}`] || ''}
-                    onChange={(e) => updateData(row.key, 'studentCount', e.target.value)}
+                    value={engFields[`studentCount_${row.key}`] || ""}
+                    onChange={(e) =>
+                      updateData(row.key, "studentCount", e.target.value)
+                    }
                   />
                 </td>
                 <td className="px-4 py-3">
                   <TableInput
-                    value={engFields[`hours_${row.key}`] || ''}
-                    onChange={(e) => updateData(row.key, 'hours', e.target.value)}
+                    value={engFields[`hours_${row.key}`] || ""}
+                    onChange={(e) =>
+                      updateData(row.key, "hours", e.target.value)
+                    }
                   />
                 </td>
                 <td className="px-4 py-3">
                   <input
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all"
-                    value={engFields[`cost_${row.key}`] || ''}
-                    onChange={(e) => updateData(row.key, 'cost', e.target.value)}
-                    placeholder="₹"
+                    value={engFields[`cost_${row.key}`] || ""}
+                    onChange={(e) =>
+                      updateData(row.key, "cost", e.target.value)
+                    }
+                    placeholder={isGstEnabled ? "Base Amt" : "₹"}
                   />
+                  {/* Visual Indicator */}
+                  {isGstEnabled && engFields[`cost_${row.key}`] && (
+                    <div className="text-[10px] text-indigo-600 font-bold mt-1 text-right">
+                      + 18% GST
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
