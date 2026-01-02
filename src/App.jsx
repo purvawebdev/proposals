@@ -15,22 +15,13 @@ function App() {
 
   const pageSets = {
     // SCENARIO 1: Both Years (Default) -> Ends with 8.jpg
-    mba: [
-      ...mbaCommonPages,
-      { bg: "/mba/8.jpg", editable: "table" }, 
-    ],
+    mba: [...mbaCommonPages, { bg: "/mba/8.jpg", editable: "table" }],
 
     // SCENARIO 2: 1st Year Only -> Ends with 8_1.jpg
-    mba_1: [
-      ...mbaCommonPages,
-      { bg: "/mba/8_1.jpg", editable: "table" },
-    ],
+    mba_1: [...mbaCommonPages, { bg: "/mba/8_1.jpg", editable: "table" }],
 
     // SCENARIO 3: 2nd Year Only -> Ends with 8_2.jpg
-    mba_2: [
-      ...mbaCommonPages,
-      { bg: "/mba/8_2.jpg", editable: "table" },
-    ],
+    mba_2: [...mbaCommonPages, { bg: "/mba/8_2.jpg", editable: "table" }],
 
     // Engineering remains the same
     engineering: [
@@ -40,6 +31,17 @@ function App() {
       { bg: "/eng/4.jpg", editable: false },
       { bg: "/eng/5.jpg", editable: false },
       { bg: "/eng/6.jpg", editable: "table" },
+    ],
+
+    //MBA + MCA Combined
+    mba_mca: [
+      { bg: "/mca/1.jpg", editable: true },
+      { bg: "/mca/2.jpg", editable: false },
+      { bg: "/mca/3.jpg", editable: false },
+      { bg: "/mca/4.jpg", editable: false },
+      { bg: "/mca/5.jpg", editable: false },
+      { bg: "/mca/6.jpg", editable: false },
+      { bg: "/mca/7.jpg", editable: "table" },
     ],
   };
 

@@ -3,11 +3,11 @@ import jsPDF from "jspdf";
 
 import MBAForm from "../forms/MBAForm";
 import EngineeringForm from "../forms/EngineeringForm";
+import MbaMcaForm from "../forms/MbaMcaForm";
 import CommonFields from "../fields/CommonFields";
 
 export default function SimplePdfGenerator({ pageSets }) {
   const [domain, setDomain] = useState("mba");
-
 
   const [collegeName, setCollegeName] = useState("");
   const [logo, setLogo] = useState(null);
@@ -30,6 +30,30 @@ export default function SimplePdfGenerator({ pageSets }) {
     cse_students: "",
     cse_hours: "",
     cse_cost: "",
+  });
+
+  const [mbaMcaFields, setMbaMcaFields] = useState({
+    // MBA
+    mba_1_1_count: "",
+    mba_1_1_hours: "",
+    mba_1_2_count: "",
+    mba_1_2_hours: "",
+    mba_year1_cost: "", // Shared Cost for MBA 1st Year (Sem 1 & 2)
+
+    mba_2_1_count: "",
+    mba_2_1_hours: "",
+    mba_2_1_cost: "",
+
+    // MCA
+    mca_1_1_count: "",
+    mca_1_1_hours: "",
+    mca_1_2_count: "",
+    mca_1_2_hours: "",
+    mca_year1_cost: "", // Shared Cost for MCA 1st Year (Sem 1 & 2)
+
+    mca_2_1_count: "",
+    mca_2_1_hours: "",
+    mca_2_1_cost: "",
   });
 
   const loadImage = (src) =>
@@ -150,6 +174,31 @@ export default function SimplePdfGenerator({ pageSets }) {
             fontSize: 15,
             cols: { studentX: 170, costX: 250, hoursX: 515 },
             rows: [203, 218, 233, 250],
+          },
+        },
+
+        mba_mca: {
+          college: {
+            x: 48,
+            y: 380,
+            fontSize: 20,
+            fontName: "helvetica",
+            fontStyle: "bold",
+          },
+          logo: {
+            x: 595 - 220 - 30,
+            y: 842 - 130 - 40,
+            maxWidth: 220,
+            maxHeight: 130,
+          },
+          table: {
+            fontName: "times",
+            fontStyle: "normal",
+            fontSize: 15,
+            // Adjust X values for your specific background columns
+            cols: { studentX: 255, hrsX: 355, costX: 470 },
+            // ⭐ 6 Y-POSITIONS for the 6 Rows (Adjust these to fit your 7th page lines)
+            rows: [110, 150, 180, 300, 340, 380],
           },
         },
       };
@@ -310,6 +359,62 @@ export default function SimplePdfGenerator({ pageSets }) {
               pdf.text(String(hoursVal), t.cols.hoursX, y);
             }
           }
+
+          // LOGIC FOR MBA + MCA COMBINED
+          // 4. SEPARATE LOGIC FOR MBA + MCA
+          else if (activeDomain === "mba_mca") {
+            // We define the data mapping for each of the 6 rows manually
+            // This allows us to reuse the "Shared Cost" variables for rows 1&2 and 4&5
+
+            const rowsData = [
+              // Row 1: MBA 1-1 (Uses Shared Cost)
+              {
+                c: mbaMcaFields.mba_1_1_count,
+                h: mbaMcaFields.mba_1_1_hours,
+                cost: mbaMcaFields.mba_year1_cost,
+              },
+              // Row 2: MBA 1-2 (Uses Shared Cost)
+              {
+                c: mbaMcaFields.mba_1_2_count,
+                h: mbaMcaFields.mba_1_2_hours,
+                
+              },
+              // Row 3: MBA 2-1
+              {
+                c: mbaMcaFields.mba_2_1_count,
+                h: mbaMcaFields.mba_2_1_hours,
+                cost: mbaMcaFields.mba_2_1_cost,
+              },
+
+              // Row 4: MCA 1-1 (Uses Shared Cost)
+              {
+                c: mbaMcaFields.mca_1_1_count,
+                h: mbaMcaFields.mca_1_1_hours,
+                cost: mbaMcaFields.mca_year1_cost,
+              },
+              // Row 5: MCA 1-2 (Uses Shared Cost)
+              {
+                c: mbaMcaFields.mca_1_2_count,
+                h: mbaMcaFields.mca_1_2_hours,
+               
+              },
+              // Row 6: MCA 2-1
+              {
+                c: mbaMcaFields.mca_2_1_count,
+                h: mbaMcaFields.mca_2_1_hours,
+                cost: mbaMcaFields.mca_2_1_cost,
+              },
+            ];
+
+            rowsData.forEach((data, idx) => {
+              const y = t.rows[idx];
+              if (!y) return;
+
+              pdf.text(String(data.c || ""), t.cols.studentX, y);
+              pdf.text(String(data.h || ""), t.cols.hrsX, y);
+              pdf.text(String(data.cost || ""), t.cols.costX, y);
+            });
+          }
         }
       }
 
@@ -334,6 +439,7 @@ export default function SimplePdfGenerator({ pageSets }) {
         >
           <option value="mba">MBA</option>
           <option value="engineering">Engineering</option>
+          <option value="mba_mca">MBA + MCA</option>
         </select>
       </div>
 
@@ -350,6 +456,13 @@ export default function SimplePdfGenerator({ pageSets }) {
 
       {domain === "engineering" && (
         <EngineeringForm engFields={engFields} setEngFields={setEngFields} />
+      )}
+
+      {domain === "mba_mca" && (
+        <MbaMcaForm
+          mbaMcaFields={mbaMcaFields}
+          setMbaMcaFields={setMbaMcaFields}
+        />
       )}
 
       <button
