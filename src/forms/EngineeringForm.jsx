@@ -17,6 +17,17 @@ export default function EngineeringForm({ engFields, setEngFields }) {
   // 1. Branch Selection Logic
   const selectedBranches = engFields.selectedBranches || [];
 
+  const allBranchIds = ENGINEERING_BRANCHES.map(b => b.id);
+  const isAllSelected = selectedBranches.length === allBranchIds.length;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setEngFields({ ...engFields, selectedBranches: [] }); // Deselect All
+    } else {
+      setEngFields({ ...engFields, selectedBranches: allBranchIds }); // Select All
+    }
+  };
+
   const toggleBranch = (id) => {
     if (selectedBranches.includes(id)) {
       setEngFields({ ...engFields, selectedBranches: selectedBranches.filter(b => b !== id) });
@@ -42,9 +53,25 @@ export default function EngineeringForm({ engFields, setEngFields }) {
       
       {/* SECTION A: BRANCH SELECTION */}
       <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">
-          Select Branches (For Syllabus Pages)
-        </h3>
+        {/* Header with Select All Button */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
+            Select Branches (For Syllabus Pages)
+          </h3>
+          
+          <button 
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-indigo-600 transition-colors"
+          >
+            {/* Custom Checkbox UI */}
+            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+              isAllSelected ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-300"
+            }`}>
+              {isAllSelected && <Check size={12} className="text-white" />}
+            </div>
+            Select All
+          </button>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {ENGINEERING_BRANCHES.map(b => {
             const isSelected = selectedBranches.includes(b.id);
