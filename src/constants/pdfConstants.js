@@ -87,9 +87,9 @@ export const COORDINATES = {
     table: {
       fontName: "helvetica",
       fontStyle: "normal",
-      fontSize: 15,
-      cols: { studentX: 170, costX: 250, hoursX: 515 },
-      rows: [203, 218, 233, 250],
+      fontSize: 14,
+      cols: { studentX: 120, costX: 210, hoursX: 515 },
+      rows: [218, 235, 255, 276],
     },
   },
 
